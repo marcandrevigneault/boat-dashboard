@@ -9,7 +9,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 from bleak import BleakClient
 
@@ -23,9 +24,18 @@ CMD_CELL_VOLTAGES = 0x04
 
 # Protection status bits (register 0x03, bytes 16-17)
 PROTECTION_FLAGS = [
-    "cell_overvoltage", "cell_undervoltage", "pack_overvoltage", "pack_undervoltage",
-    "charge_overtemp", "charge_undertemp", "discharge_overtemp", "discharge_undertemp",
-    "charge_overcurrent", "discharge_overcurrent", "short_circuit", "frontend_ic_error",
+    "cell_overvoltage",
+    "cell_undervoltage",
+    "pack_overvoltage",
+    "pack_undervoltage",
+    "charge_overtemp",
+    "charge_undertemp",
+    "discharge_overtemp",
+    "discharge_undertemp",
+    "charge_overcurrent",
+    "discharge_overcurrent",
+    "short_circuit",
+    "frontend_ic_error",
     "mosfet_locked",
 ]
 
@@ -40,24 +50,24 @@ def verify_frame(frame: bytes) -> bytes:
     if len(frame) < 7 or frame[0] != 0xDD or frame[-1] != 0x77:
         raise ValueError(f"bad frame framing: {frame.hex()}")
     status, length = frame[2], frame[3]
-    payload = frame[4:4 + length]
+    payload = frame[4 : 4 + length]
     if len(payload) != length or len(frame) != length + 7:
         raise ValueError(f"bad frame length: {frame.hex()}")
     if status != 0x00:
         raise ValueError(f"BMS returned error status {status:#x}")
     expected = (0x10000 - (length + sum(payload))) & 0xFFFF
-    got = int.from_bytes(frame[4 + length:6 + length], "big")
+    got = int.from_bytes(frame[4 + length : 6 + length], "big")
     if expected != got:
         raise ValueError(f"checksum mismatch {got:#x} != {expected:#x}")
     return payload
 
 
 def _u16(b: bytes, i: int) -> int:
-    return int.from_bytes(b[i:i + 2], "big")
+    return int.from_bytes(b[i : i + 2], "big")
 
 
 def _s16(b: bytes, i: int) -> int:
-    return int.from_bytes(b[i:i + 2], "big", signed=True)
+    return int.from_bytes(b[i : i + 2], "big", signed=True)
 
 
 @dataclass
@@ -65,22 +75,22 @@ class BatteryState:
     name: str
     address: str
     connected: bool = False
-    voltage: float | None = None          # V
-    current: float | None = None          # A, positive = charging
-    power: float | None = None            # W
-    soc: int | None = None                # %
+    voltage: float | None = None  # V
+    current: float | None = None  # A, positive = charging
+    power: float | None = None  # W
+    soc: int | None = None  # %
     remaining_ah: float | None = None
     capacity_ah: float | None = None
     cycles: int | None = None
     temperatures: list[float] = field(default_factory=list)  # °C
-    cells: list[float] = field(default_factory=list)          # V
+    cells: list[float] = field(default_factory=list)  # V
     charge_enabled: bool | None = None
     discharge_enabled: bool | None = None
     protections: list[str] = field(default_factory=list)
-    updated: float | None = None          # unix time of last good reading
+    updated: float | None = None  # unix time of last good reading
     error: str | None = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         if self.cells:
             d["cell_min"] = min(self.cells)
@@ -104,7 +114,8 @@ def parse_basic_info(p: bytes, state: BatteryState) -> None:
     state.discharge_enabled = bool(fet & 0x02)
     ntc_count = p[22]
     state.temperatures = [
-        round((_u16(p, 23 + 2 * i) - 2731) / 10, 1) for i in range(ntc_count)
+        round((_u16(p, 23 + 2 * i) - 2731) / 10, 1)
+        for i in range(ntc_count)
         if 23 + 2 * i + 2 <= len(p)
     ]
 
@@ -122,8 +133,8 @@ class JBDClient:
         self._buf = bytearray()
         self._frame: asyncio.Future[bytes] | None = None
 
-    def _on_notify(self, _char, data: bytearray) -> None:
-        if data[:1] == b"\xDD":
+    def _on_notify(self, _char: object, data: bytearray) -> None:
+        if data[:1] == b"\xdd":
             self._buf = bytearray()
         self._buf += data
         # Complete when we have header + payload + checksum + end byte.

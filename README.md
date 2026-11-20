@@ -8,8 +8,11 @@ Onboard dashboard for the boat computer (`navcentral`). Served on port 8080, so 
 - Night (red) mode
 
 ## Run
-    python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+    python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
     .venv/bin/python -m boatdash.server
 Devices are configured in `config.json`. One-off BMS test: `.venv/bin/python scripts/bms_test.py <MAC>`.
 
 To start at boot: `deploy/boat-dashboard.service` (systemd).
+
+## For developers
+Read `CLAUDE.md` (workflow and quality bar), `docs/ARCHITECTURE.md`, and `docs/BOARD.md` (plan).

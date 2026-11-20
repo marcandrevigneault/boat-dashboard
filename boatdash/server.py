@@ -8,8 +8,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -24,16 +26,17 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 batteries = [
     JBDClient(b["name"], b["address"], CONFIG.get("poll_interval", 2.0))
-    for b in CONFIG["batteries"] if b.get("type", "jbd") == "jbd"
+    for b in CONFIG["batteries"]
+    if b.get("type", "jbd") == "jbd"
 ]
 
 
-def snapshot() -> dict:
+def snapshot() -> dict[str, Any]:
     return {"batteries": [b.state.to_dict() for b in batteries]}
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     tasks = []
     for b in batteries:
         tasks.append(asyncio.create_task(b.run()))
@@ -47,7 +50,7 @@ app = FastAPI(title="Boat Dashboard", lifespan=lifespan)
 
 
 @app.get("/api/batteries")
-def api_batteries() -> dict:
+def api_batteries() -> dict[str, Any]:
     return snapshot()
 
 
