@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boat Dashboard</title>
+<style>
+  :root { --bg:#0b1620; --card:#132433; --fg:#e6eef5; --dim:#8aa0b4; --ok:#3ecf8e; --warn:#f5b942; --bad:#ef5b5b; --accent:#4aa3ff; }
+  body.night { --bg:#000; --card:#140000; --fg:#ff5050; --dim:#a03030; --ok:#ff5050; --warn:#ff5050; --bad:#ff2020; --accent:#ff5050; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px system-ui, sans-serif; }
+  header { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #ffffff14; }
+  header h1 { font-size:18px; margin:0; flex:1; }
+  #conn { font-size:12px; color:var(--dim); }
+  button { background:var(--card); color:var(--fg); border:1px solid #ffffff22; border-radius:6px; padding:6px 10px; font:inherit; }
+  main { padding:16px; display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); }
+  .bank { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:24px; background:var(--card); border-radius:10px; padding:14px 18px; }
+  .card { background:var(--card); border-radius:10px; padding:16px; }
+  .card h2 { margin:0 0 12px; font-size:16px; display:flex; justify-content:space-between; }
+  .status { font-size:12px; font-weight:normal; }
+  .soc { display:flex; align-items:baseline; gap:8px; }
+  .soc .big { font-size:44px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .bar { height:10px; background:#ffffff14; border-radius:5px; overflow:hidden; margin:8px 0 14px; }
+  .bar > div { height:100%; background:var(--ok); transition:width .5s; }
+  .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .m .l { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em; }
+  .m .v { font-size:20px; font-variant-numeric:tabular-nums; }
+  .cells { display:flex; gap:6px; margin-top:14px; }
+  .cell { flex:1; text-align:center; background:#ffffff0c; border-radius:6px; padding:6px 2px; font-size:13px; font-variant-numeric:tabular-nums; }
+  .cell.lo { outline:1px solid var(--warn); } .cell.hi { outline:1px solid var(--accent); }
+  .alert { margin-top:12px; color:var(--bad); font-weight:600; }
+  .chg { color:var(--ok); } .dis { color:var(--warn); }
+  .stale { opacity:.5; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚓ Boat Dashboard — Batteries</h1>
+  <span id="conn">connexion…</span>
+  <button id="night" title="Mode nuit">🌙</button>
+</header>
+<main id="main"></main>
+<script>
+const $ = (s) => document.querySelector(s);
+const fmt = (v, d = 1, u = "") => v == null ? "—" : `${v.toFixed(d)}${u}`;
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+try { if (localStorage.night === "1") document.body.classList.add("night"); } catch {}
+$("#night").onclick = () => {
+  const on = document.body.classList.toggle("night");
+  try { localStorage.night = on ? "1" : "0"; } catch {}
+};
+
+function timeLeft(b) {
+  if (b.current == null || Math.abs(b.current) < 0.2) return "—";
+  const ah = b.current < 0 ? b.remaining_ah : b.capacity_ah - b.remaining_ah;
+  const h = ah / Math.abs(b.current);
+  if (h > 99) return ">99 h";
+  return `${Math.floor(h)} h ${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
+}
+
+function bankSummary(list) {
+  const live = list.filter(b => b.voltage != null);
+  if (live.length < 2) return "";
+  const cur = live.reduce((s, b) => s + b.current, 0);
+  const rem = live.reduce((s, b) => s + b.remaining_ah, 0);
+  const cap = live.reduce((s, b) => s + b.capacity_ah, 0);
+  const v = live.reduce((s, b) => s + b.voltage, 0) / live.length;
+  const agg = { current: cur, remaining_ah: rem, capacity_ah: cap };
+  return `<div class="bank">
+    <div class="m"><div class="l">Banc total</div><div class="v">${fmt(rem / cap * 100, 0, " %")}</div></div>
+    <div class="m"><div class="l">Tension</div><div class="v">${fmt(v, 2, " V")}</div></div>
+    <div class="m"><div class="l">Courant</div><div class="v ${cur >= 0 ? "chg" : "dis"}">${fmt(cur, 1, " A")}</div></div>
+    <div class="m"><div class="l">Puissance</div><div class="v">${fmt(cur * v, 0, " W")}</div></div>
+    <div class="m"><div class="l">Restant</div><div class="v">${fmt(rem, 0, " Ah")} / ${fmt(cap, 0)}</div></div>
+    <div class="m"><div class="l">${cur >= 0 ? "Plein dans" : "Autonomie"}</div><div class="v">${timeLeft(agg)}</div></div>
+  </div>`;
+}
+
+function card(b) {
+  const age = b.updated ? Date.now() / 1000 - b.updated : Infinity;
+  const stale = age > 15;
+  const status = b.connected && !stale ? `<span class="status chg">● connecté</span>`
+    : `<span class="status dis">● ${b.updated ? "hors ligne" : "connexion…"}</span>`;
+  const socColor = b.soc == null ? "" : b.soc < 20 ? "var(--bad)" : b.soc < 40 ? "var(--warn)" : "var(--ok)";
+  const cells = b.cells.map(c => `<div class="cell ${c === b.cell_min && b.cell_delta_mv > 20 ? "lo" : ""}${c === b.cell_max && b.cell_delta_mv > 20 ? "hi" : ""}">${c.toFixed(3)}</div>`).join("");
+  const alerts = [...b.protections];
+  if (b.charge_enabled === false) alerts.push("charge désactivée");
+  if (b.discharge_enabled === false) alerts.push("décharge désactivée");
+  return `<div class="card ${stale && b.updated ? "stale" : ""}">
+    <h2>${esc(b.name)} ${status}</h2>
+    <div class="soc"><span class="big">${b.soc ?? "—"}</span><span>%</span></div>
+    <div class="bar"><div style="width:${b.soc ?? 0}%;background:${socColor}"></div></div>
+    <div class="grid">
+      <div class="m"><div class="l">Tension</div><div class="v">${fmt(b.voltage, 2, " V")}</div></div>
+      <div class="m"><div class="l">Courant</div><div class="v ${b.current >= 0 ? "chg" : "dis"}">${fmt(b.current, 2, " A")}</div></div>
+      <div class="m"><div class="l">Puissance</div><div class="v">${fmt(b.power, 0, " W")}</div></div>
+      <div class="m"><div class="l">Restant</div><div class="v">${fmt(b.remaining_ah, 1, " Ah")}</div></div>
+      <div class="m"><div class="l">Temp.</div><div class="v">${b.temperatures.length ? b.temperatures.map(t => t.toFixed(1)).join(" / ") + " °C" : "—"}</div></div>
+      <div class="m"><div class="l">Écart cellules</div><div class="v">${b.cell_delta_mv ?? "—"} mV</div></div>
+    </div>
+    <div class="cells">${cells}</div>
+    ${alerts.length ? `<div class="alert">⚠ ${alerts.map(esc).join(", ")}</div>` : ""}
+    ${b.error && !b.connected ? `<div class="status" style="margin-top:8px;color:var(--dim)">${esc(b.error)}</div>` : ""}
+  </div>`;
+}
+
+function render(data) {
+  $("#main").innerHTML = bankSummary(data.batteries) + data.batteries.map(card).join("");
+}
+
+function connect() {
+  const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  ws.onopen = () => $("#conn").textContent = "en direct";
+  ws.onmessage = (e) => render(JSON.parse(e.data));
+  ws.onclose = () => { $("#conn").textContent = "reconnexion…"; setTimeout(connect, 2000); };
+}
+connect();
+</script>
+</body>
+</html>

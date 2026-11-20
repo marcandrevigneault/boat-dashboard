@@ -1,0 +1,14 @@
+[Unit]
+Description=Boat Dashboard
+After=bluetooth.service network.target
+Wants=bluetooth.service
+
+[Service]
+User=sijaurais
+WorkingDirectory=/home/sijaurais/boat-dashboard
+ExecStart=/home/sijaurais/boat-dashboard/.venv/bin/python -m boatdash.server
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

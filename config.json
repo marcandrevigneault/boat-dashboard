@@ -1,0 +1,8 @@
+{
+  "batteries": [
+    {"name": "Batterie A", "address": "A5:C2:37:69:83:49", "type": "jbd"},
+    {"name": "Batterie B", "address": "A5:C2:37:69:6F:07", "type": "jbd"}
+  ],
+  "poll_interval": 2.0,
+  "http_port": 8080
+}
