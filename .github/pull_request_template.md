@@ -4,6 +4,9 @@
 ## How it works
 <!-- Short technical summary. Update docs/systems/*.md if behaviour changed. -->
 
+## Test tier
+<!-- Light (small UI-only, label `light-tests`) or Full. See CLAUDE.md. -->
+
 ## Checklist
 - [ ] Tests added/updated; `pytest` passes locally
 - [ ] `ruff check`, `ruff format --check`, `mypy` clean

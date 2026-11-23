@@ -5,9 +5,12 @@ IDs: CORE (backend platform), UI, PWR (power), NAV (navigation), N2K (NMEA 2000)
 WX (weather/routing), OPS (hardware/deploy).
 
 ## In progress
-- **NAV-1 GPS position, speed, course** — read gpsd (u-blox 7 on USB); show in UI. Depends on CORE-1.
+- **CORE-0 Engineering foundation** — PR #1 (`chore/engineering-foundation`), CI green.
+  Next step: owner merges PR #1 (merge policy still to be decided by owner), then start CORE-1.
 
 ## Next
+- **NAV-1 GPS position, speed, course** — read gpsd (u-blox 7 on USB, 3D fix confirmed); show in UI.
+  Depends on CORE-1.
 - **CORE-1 Data store + WebSocket deltas** — Signal K paths/SI units, app factory, typed config
   (pydantic), snapshot on connect then changed paths only. Raise coverage gate to 85 %.
 - **UI-1 Design system + app shell** — choose frontend stack (ADR), design tokens (type, spacing,
@@ -16,6 +19,8 @@ WX (weather/routing), OPS (hardware/deploy).
 - **PWR-1 Victron SmartBMV** — decode BLE "instant readout" advertisements. Needs the device's
   encryption key from the owner (stored outside the repo).
 - **OPS-1 Branch protection** — require CI on `main`.
+- **CORE-2 E2E suite + test tiers in CI** — browser E2E (Playwright) against a simulated backend
+  (fake BMS/GPS sources); CI job skipped when the PR has the `light-tests` label, always run on `main`.
 
 ## Backlog
 - **PWR-2 History** — store battery/GPS history efficiently (ring buffer + downsampled on-disk
@@ -34,4 +39,3 @@ WX (weather/routing), OPS (hardware/deploy).
 
 ## Done
 - **PWR-0 JBD BMS over BLE** — both batteries live, reconnects, French UI, systemd service.
-- **CORE-0 Engineering foundation** — pyproject, ruff, mypy strict, pytest, CI, docs, board.
