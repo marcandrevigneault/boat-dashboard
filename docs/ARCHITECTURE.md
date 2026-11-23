@@ -23,11 +23,13 @@ GPS, charts, radar and weather routing — with a consumer-grade UI.
   rate-limited. Keeps bandwidth and CPU low on the Pi and on tablets.
 - **UI**: static web app served by the backend. Works offline (no internet at sea).
 
-## Current state (v0.1)
+## Current state (v0.2)
+- `boatdash/ble.py` — the single shared BLE scanner (see `docs/systems/ble.md`).
 - `boatdash/jbd.py` — JBD BMS over BLE (see `docs/systems/bms-jbd.md`).
+- `boatdash/victron.py` — Victron SmartSolar, BMV, Orion XS (see `docs/systems/victron.md`).
 - `boatdash/server.py` — FastAPI app; pushes a full snapshot every second (to be replaced by the
   store + deltas, board item CORE-1).
-- `web/index.html` — single-page battery view (to be replaced by the design-system UI, UI-1).
+- `web/index.html` — single page: energy flow, Victron cards, batteries (to be replaced by the design-system UI, UI-1).
 
 ## Decisions
 See `docs/adr/`.

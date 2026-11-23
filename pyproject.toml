@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 license = { text = "Proprietary" }
 dependencies = [
   "bleak>=1.0",
+  "victron-ble>=0.9.3,<0.10",
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
 ]
@@ -42,7 +43,7 @@ warn_unreachable = true
 packages = ["boatdash"]
 
 [[tool.mypy.overrides]]
-module = ["bleak.*"]
+module = ["bleak.*", "victron_ble.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

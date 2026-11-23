@@ -17,27 +17,41 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
+from .ble import BleHub
 from .jbd import JBDClient
+from .victron import VictronMonitor, load_keys
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = json.loads((ROOT / "config.json").read_text())
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
+hub = BleHub()
+
 batteries = [
-    JBDClient(b["name"], b["address"], CONFIG.get("poll_interval", 2.0))
+    JBDClient(b["name"], b["address"], CONFIG.get("poll_interval", 2.0), hub=hub)
     for b in CONFIG["batteries"]
     if b.get("type", "jbd") == "jbd"
 ]
 
 
+victron = VictronMonitor(
+    [(d["name"], d["address"], d["kind"]) for d in CONFIG.get("victron", [])],
+    load_keys(),
+)
+hub.add_listener(victron.on_advertisement)
+
+
 def snapshot() -> dict[str, Any]:
-    return {"batteries": [b.state.to_dict() for b in batteries]}
+    return {
+        "batteries": [b.state.to_dict() for b in batteries],
+        "victron": victron.snapshot(),
+    }
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    tasks = []
+    tasks = [asyncio.create_task(hub.run())]
     for b in batteries:
         tasks.append(asyncio.create_task(b.run()))
         await asyncio.sleep(1.5)  # stagger BLE connects; BlueZ dislikes simultaneous ones

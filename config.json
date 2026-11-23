@@ -1,8 +1,33 @@
 {
   "batteries": [
-    {"name": "Batterie A", "address": "A5:C2:37:69:83:49", "type": "jbd"},
-    {"name": "Batterie B", "address": "A5:C2:37:69:6F:07", "type": "jbd"}
+    {
+      "name": "Batterie A",
+      "address": "A5:C2:37:69:83:49",
+      "type": "jbd"
+    },
+    {
+      "name": "Batterie B",
+      "address": "A5:C2:37:69:6F:07",
+      "type": "jbd"
+    }
   ],
   "poll_interval": 2.0,
-  "http_port": 8080
+  "http_port": 8080,
+  "victron": [
+    {
+      "name": "SmartSolar",
+      "address": "E3:E4:87:F8:EB:A1",
+      "kind": "solar"
+    },
+    {
+      "name": "BMV-712",
+      "address": "D1:E9:74:07:83:07",
+      "kind": "bmv"
+    },
+    {
+      "name": "Orion XS",
+      "address": "FB:AF:0B:1F:75:FB",
+      "kind": "orion"
+    }
+  ]
 }

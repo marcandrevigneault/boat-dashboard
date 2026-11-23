@@ -2,7 +2,7 @@
 
 Victron Smart devices broadcast their live values in BLE advertisements (manufacturer ID 0x02E1),
 encrypted with AES-128-CTR using a per-device key shown in VictronConnect. We only listen: no
-connection, no pairing, read-only. One passive scanner serves every Victron device.
+connection, no pairing, read-only. Advertisements come from the shared scanner (ble.py).
 
 Decryption and bit-unpacking are done by the `victron-ble` library; this module maps the result to
 our own stable, typed shape so the rest of the app doesn't depend on library internals.
@@ -10,7 +10,6 @@ our own stable, typed shape so the rest of the app doesn't depend on library int
 
 from __future__ import annotations
 
-import asyncio
 import enum
 import json
 import logging
@@ -54,9 +53,9 @@ def _name(value: Any) -> str | None:
     """Enum → lowercase name ('bulk', 'no_error'); None stays None."""
     if value is None:
         return None
-    if isinstance(value, enum.Flag) and not isinstance(value, enum.IntEnum):
-        return ",".join(m.name.lower() for m in type(value) if m in value and m.value) or None
-    return value.name.lower() if isinstance(value, enum.Enum) else str(value)
+    if isinstance(value, enum.Enum):
+        return value.name.lower() if value.name else str(value.value)
+    return str(value)
 
 
 def _get(data: Any, attr: str) -> Any:
@@ -168,24 +167,8 @@ class VictronMonitor:
     def snapshot(self) -> list[dict[str, Any]]:
         return [s.to_dict() for s in self.states.values()]
 
-    async def run(self) -> None:  # pragma: no cover - needs a Bluetooth adapter
-        from bleak import BleakScanner
-
-        def on_adv(device: Any, adv: Any) -> None:
-            raw = adv.manufacturer_data.get(VICTRON_MANUFACTURER_ID)
-            if raw is not None:
-                self.handle(device.address, bytes(raw))
-
-        backoff = 2.0
-        while True:
-            try:
-                async with BleakScanner(on_adv):
-                    backoff = 2.0
-                    while True:
-                        await asyncio.sleep(3600)
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                log.warning("Victron scanner stopped: %s", e)
-                await asyncio.sleep(backoff)
-                backoff = min(backoff * 2, 60)
+    def on_advertisement(self, address: str, manufacturer_data: dict[int, bytes]) -> None:
+        """BleHub listener."""
+        raw = manufacturer_data.get(VICTRON_MANUFACTURER_ID)
+        if raw is not None:
+            self.handle(address, raw)

@@ -8,13 +8,8 @@ WX (weather/routing), OPS (hardware/deploy).
 - **CORE-0 Engineering foundation** — PR #1 (`chore/engineering-foundation`), CI green.
   Next step: owner merges PR #1 (merge policy still to be decided by owner), then start CORE-1.
 
-- **PWR-1 Victron monitoring over BLE** — branch `feat/victron-ble`. Decode "instant readout"
-  advertisements (library `victron-ble`) for SmartSolar MPPT (E3:E4:87:F8:EB:A1), SmartBMV
-  (D1:E9:74:07:83:07) and Orion XS DC-DC (FB:AF:0B:1F:75:FB); add cards to the dashboard.
-  Status: devices found; Orion XS broadcasts instant readout, SmartSolar + BMV appear to have it off.
-  Blocked on owner: enable instant readout on SmartSolar + BMV and provide the 3 encryption keys
-  (stored in `~/.config/boatdash/victron-keys.json`, never in the repo). Next step: decoder +
-  tests + cards.
+- **PWR-1 Victron monitoring over BLE** — PR open (`feat/victron-ble`), Full tier.
+  Next step: CI green → merge (after #1). Then PWR-4 when the VE.Direct cable is available.
 
 ## Next
 - **PWR-4 SmartSolar ON/OFF control** — BLE instant readout is read-only, so control goes through the
@@ -47,4 +42,6 @@ WX (weather/routing), OPS (hardware/deploy).
 - **OPS-3 Fixed address / `navcentral.local`** — mDNS so screens find the app without an IP.
 
 ## Done
+- **PWR-1 (code) Victron monitoring** — SmartSolar, BMV-712, Orion XS decoded live; shared BLE
+  scanner fixes BlueZ InProgress conflicts; energy-flow strip + cards. Keys outside the repo.
 - **PWR-0 JBD BMS over BLE** — both batteries live, reconnects, French UI, systemd service.
