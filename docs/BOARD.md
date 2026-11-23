@@ -5,14 +5,12 @@ IDs: CORE (backend platform), UI, PWR (power), NAV (navigation), N2K (NMEA 2000)
 WX (weather/routing), OPS (hardware/deploy).
 
 ## In progress
-_(empty — next pick from "Next", owner's call)_
+- **PWR-4 Solar charger ON/OFF** — PR open (`feat/solar-switch`), Full tier, verified live.
+  Includes PRs #4 and #5 (merged in); merge those first, then this one.
 
 ## Next
 - **OPS-5 Deploy from `main`** — the service runs from a separate checkout updated only from
   `main`, so switching branches in the dev checkout never changes what runs on board.
-- **PWR-4 SmartSolar ON/OFF control** — BLE instant readout is read-only, so control goes through the
-  documented VE.Direct HEX protocol (device mode register 0x0200: on/off) over a VE.Direct-to-USB
-  cable. Blocked on owner: buy the cable. UI: ON/OFF button with confirmation and live state.
 - **NAV-1 GPS position, speed, course** — read gpsd (u-blox 7 on USB, 3D fix confirmed); show in UI.
   Depends on CORE-1.
 - **CORE-1 Data store + WebSocket deltas** — Signal K paths/SI units, app factory, typed config
@@ -25,6 +23,8 @@ _(empty — next pick from "Next", owner's call)_
   (fake BMS/GPS sources); CI job skipped when the PR has the `light-tests` label, always run on `main`.
 
 ## Backlog
+- **OPS-6 Access control** — today anyone on the boat Wi-Fi can use the controls (solar switch).
+  Add a simple PIN/session for control actions before more controls land.
 - **PWR-2 History** — store battery/GPS history efficiently (ring buffer + downsampled on-disk
   store), charts of SOC/current over 24 h/7 d.
 - **PWR-3 Alarms** — thresholds (low SOC, cell imbalance, BMS protection), sound + visual.
