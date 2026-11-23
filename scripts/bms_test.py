@@ -7,7 +7,7 @@ import sys
 from bleak import BleakClient
 
 sys.path.insert(0, __file__.rsplit("/scripts/", 1)[0])
-from boatdash.jbd import JBDClient, NOTIFY_UUID  # noqa: E402
+from boatdash.jbd import NOTIFY_UUID, JBDClient
 
 
 async def main(address: str) -> None:
