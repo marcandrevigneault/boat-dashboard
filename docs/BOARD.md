@@ -40,6 +40,9 @@ _(empty — next pick from "Next", owner's call)_
 - **OPS-3 Fixed address / `navcentral.local`** — mDNS so screens find the app without an IP.
 
 ## Done
+- **OPS-7 Full-screen dashboard at login** — `deploy/install-kiosk.sh` adds an XDG autostart entry
+  that waits for the service and opens Firefox in kiosk mode with its own quiet profile
+  (Alt+F4 to exit; `--remove` to undo). Autologin (LightDM) and no screen lock are set on navcentral.
 - **CORE-0 Engineering foundation** — tooling, CI (3.11/3.13), tests, docs, board (#1).
 - **OPS-4 Desktop launcher** — anchor icon on the desktop + app menu; starts the service if
   needed and opens the dashboard (`deploy/install-desktop-launcher.sh`). The script is installed to
