@@ -5,8 +5,7 @@ IDs: CORE (backend platform), UI, PWR (power), NAV (navigation), N2K (NMEA 2000)
 WX (weather/routing), OPS (hardware/deploy).
 
 ## In progress
-- **PWR-4 Solar charger ON/OFF** — PR open (`feat/solar-switch`), Full tier, verified live.
-  Includes PRs #4 and #5 (merged in); merge those first, then this one.
+_(empty — next pick from "Next", owner's call)_
 
 ## Next
 - **OPS-5 Deploy from `main`** — the service runs from a separate checkout updated only from
@@ -39,6 +38,10 @@ WX (weather/routing), OPS (hardware/deploy).
   check from behind the panel.
 
 ## Done
+- **OPS-7 Full-screen dashboard at login** — `deploy/install-kiosk.sh` adds an XDG autostart entry
+  that waits for the service and opens Firefox in kiosk mode with its own quiet profile
+  (Alt+F4 to exit; `--remove` to undo). Autologin (LightDM) and no screen lock are set on navcentral (#7).
+- **PWR-4 Solar charger ON/OFF** — Bluetooth VE.Smart, confirm sheet, read-back; verified live (#6).
 - **OPS-3 Name on the network** — open `http://navcentral:8080` (router DNS, search domain `lan`)
   or `http://navcentral.local:8080` (mDNS via avahi, works on any network). Server listens on IPv4
   and IPv6 (the router hands out IPv6 for the name; phones try it first).

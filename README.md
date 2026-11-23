@@ -13,6 +13,7 @@ Onboard dashboard for the boat computer (`navcentral`). Served on port 8080, so 
 Devices are configured in `config.json`. One-off BMS test: `.venv/bin/python scripts/bms_test.py <MAC>`.
 
 Desktop icon: `deploy/install-desktop-launcher.sh` (starts the service if needed, opens the browser).
+Full screen at login: `deploy/install-kiosk.sh` (Firefox kiosk, own profile; Alt+F4 exits, `--remove` undoes).
 
 To start at boot: `deploy/boat-dashboard.service` (systemd).
 
