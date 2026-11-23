@@ -60,7 +60,7 @@
   .alert { margin-top:12px; color:var(--bad); font-weight:600; font-size:13px; }
   .chg { color:var(--ok); } .dis { color:var(--warn); }
 
-  /* Charger switch (control arrives with PWR-4 / VE.Direct) */
+  /* Charger on/off switch (PWR-4, Bluetooth VE.Smart) */
   .control { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
   .control .txt { font-size:13px; } .control .sub { font-size:12px; color:var(--dim); }
   .switch { position:relative; width:52px; height:30px; border-radius:15px; background:var(--card2); border:1px solid var(--line); flex:none; }
@@ -68,6 +68,28 @@
   .switch.on { background:color-mix(in srgb, var(--ok) 35%, var(--card2)); }
   .switch.on::after { transform:translateX(22px); background:var(--ok); }
   .switch[aria-disabled="true"] { opacity:.5; cursor:not-allowed; }
+  button.switch { padding:0; cursor:pointer; font:inherit; -webkit-tap-highlight-color:transparent; }
+  button.switch:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  /* touch target ≥ 44 px without changing the look */
+  button.switch::before { content:""; position:absolute; inset:-8px -6px; }
+  .switch.pending::after { background:transparent; border:2px solid var(--dim); border-top-color:var(--accent);
+                           width:18px; height:18px; animation:spin .8s linear infinite; }
+  .switch.pending.on::after { transform:translateX(22px); }
+  @keyframes spin { to { rotate:360deg; } }
+  .control .sub.warn { color:var(--warn); } .control .sub.bad { color:var(--bad); }
+
+  /* Confirmation sheet */
+  dialog#confirm { border:1px solid var(--line); border-radius:16px; background:var(--card); color:var(--fg);
+                   padding:22px; width:min(360px, calc(100vw - 32px)); box-shadow:0 20px 60px #0008; }
+  dialog#confirm::backdrop { background:#0009; backdrop-filter:blur(2px); }
+  dialog#confirm h4 { margin:0 0 8px; font-size:17px; }
+  dialog#confirm p { margin:0 0 20px; color:var(--dim); font-size:14px; }
+  dialog#confirm .row { display:flex; gap:10px; justify-content:flex-end; }
+  dialog#confirm button { font:inherit; font-weight:600; border-radius:10px; padding:10px 16px; min-height:44px;
+                          border:1px solid var(--line); background:var(--card2); color:var(--fg); cursor:pointer; }
+  dialog#confirm button.go { background:var(--accent); border-color:transparent; color:#fff; }
+  dialog#confirm button.go.off { background:var(--warn); color:#1a1200; }
+  body.night dialog#confirm button.go { background:#5a0000; color:var(--fg); }
 
   @media (max-width:420px) { .metrics { grid-template-columns:repeat(2, 1fr); } .hero .big { font-size:36px; } }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
@@ -86,6 +108,11 @@
   <h2 class="section">Batteries</h2>
   <div class="grid" id="batteries"></div>
 </main>
+<dialog id="confirm" aria-labelledby="confirm-title">
+  <h4 id="confirm-title"></h4>
+  <p id="confirm-text"></p>
+  <div class="row"><button id="confirm-no" type="button">Annuler</button><button id="confirm-go" class="go" type="button"></button></div>
+</dialog>
 <script>
 const $ = (s) => document.querySelector(s);
 const num = (v) => typeof v === "number" && isFinite(v);
@@ -110,12 +137,14 @@ const OFF_FR = {
 const idleReason = (d) => {
   const v = d.values;
   if (v.state !== "off") return null;
+  if (d.kind === "solar" && d.control?.mode === "off") return null;
   if (d.kind === "solar" && !(v.pv_power > 0)) return "Pas de soleil — reprend tout seul au lever du jour.";
   if (d.kind === "orion" && ["remote_input", "engine_shutdown"].includes(v.off_reason))
     return "Moteur arrêté — se met en marche avec le moteur.";
   return null;
 };
-const stateLabel = (d) => idleReason(d) ? "En veille" : (STATE_FR[d.values.state] ?? "—");
+const stateLabel = (d) => d.control?.mode === "off" ? "Coupé"
+  : idleReason(d) ? "En veille" : (STATE_FR[d.values.state] ?? "—");
 const stateChip = (st, stale, idle = false) => {
   if (stale) return `<span class="chip dim">hors ligne</span>`;
   if (!st) return `<span class="chip dim">—</span>`;
@@ -128,9 +157,10 @@ const metric = (l, v, cls = "") => `<div class="m"><div class="l">${l}</div><div
 const hm = (mins) => num(mins) ? `${Math.floor(mins / 60)} h ${String(Math.round(mins % 60)).padStart(2, "0")}` : "—";
 
 function solarCard(d) {
-  const v = d.values, stale = isStale(d.updated), on = v.state && v.state !== "off";
+  const v = d.values, stale = isStale(d.updated), cut = d.control?.mode === "off";
+  const chip = cut && !stale ? `<span class="chip warn">Coupé</span>` : stateChip(v.state, stale, !!idleReason(d));
   return `<div class="card ${stale ? "stale" : ""}">
-    <h3>☀️ Solaire ${stateChip(v.state, stale, !!idleReason(d))}</h3>
+    <h3>☀️ Solaire ${chip}</h3>
     <div class="model">${esc(d.model ?? d.name)}</div>
     <div class="hero"><span class="big">${num(v.pv_power) ? v.pv_power : "—"}</span><span class="unit">W panneaux</span></div>
     <div class="metrics" style="margin-top:12px">
@@ -140,12 +170,78 @@ function solarCard(d) {
     </div>
     ${!stale && idleReason(d) ? `<div class="note">${idleReason(d)}</div>` : ""}
     ${errLine(v.error)}
-    <div class="control">
-      <div><div class="txt">Chargeur solaire</div><div class="sub">Contrôle à venir — câble VE.Direct requis</div></div>
-      <div class="switch ${on ? "on" : ""}" role="switch" aria-checked="${on}" aria-disabled="true" title="Nécessite le câble VE.Direct (PWR-4)"></div>
-    </div>
+    ${chargerControl(d)}
   </div>`;
 }
+
+// ---- Solar charger on/off (POST /api/victron/{name}/charger) --------------------------------
+const ui = { pending: {}, error: {} };  // per device: command in flight / last local failure
+const ERR_FR = {
+  unreachable: "Chargeur injoignable — réessayez dans un instant.",
+  refused: "Refusé par le chargeur.",
+  busy: "Une commande est déjà en cours.",
+  network: "Pas de connexion au tableau de bord.",
+};
+function chargerControl(d) {
+  const c = d.control;
+  if (!c) return `<div class="control"><div><div class="txt">Chargeur solaire</div>
+      <div class="sub">Contrôle indisponible — code PIN Bluetooth non configuré</div></div>
+      <div class="switch" role="switch" aria-disabled="true"></div></div>`;
+  const pending = ui.pending[d.name] ?? null;  // target of our own command: true = on
+  const on = pending !== null ? pending : c.mode === "on";
+  const err = ui.error[d.name] ?? c.error;
+  let sub, cls = "";
+  if (pending !== null) sub = pending ? "Allumage… (confirmation du chargeur)" : "Arrêt… (confirmation du chargeur)";
+  else if (c.busy) sub = "Communication avec le chargeur…";
+  else if (err) { sub = ERR_FR[err] ?? err; cls = "bad"; }
+  else if (c.mode === "on") sub = "Les panneaux chargent les batteries quand il y a du soleil.";
+  else if (c.mode === "off") { sub = "Coupé — les panneaux ne chargent pas."; cls = "warn"; }
+  else sub = "Lecture de l'état…";
+  const disabled = pending !== null || c.busy || !c.mode;
+  return `<div class="control">
+      <div><div class="txt">Chargeur solaire</div><div class="sub ${cls}" aria-live="polite">${esc(sub)}</div></div>
+      <button class="switch ${on ? "on" : ""} ${pending !== null ? "pending" : ""}" role="switch" aria-checked="${on}"
+        aria-label="Chargeur solaire" ${disabled ? `aria-disabled="true"` : ""} data-charger="${esc(d.name)}" data-on="${on}"></button>
+    </div>`;
+}
+
+function confirmSwitch(turnOn) {
+  const dlg = $("#confirm");
+  $("#confirm-title").textContent = turnOn ? "Allumer le chargeur solaire ?" : "Couper le chargeur solaire ?";
+  $("#confirm-text").textContent = turnOn
+    ? "Les panneaux recommenceront à charger les batteries."
+    : "Les panneaux ne chargeront plus les batteries jusqu'à ce que vous le rallumiez.";
+  const go = $("#confirm-go");
+  go.textContent = turnOn ? "Allumer" : "Couper";
+  go.classList.toggle("off", !turnOn);
+  return new Promise((resolve) => {
+    const done = (ok) => { dlg.close(); go.onclick = $("#confirm-no").onclick = dlg.oncancel = null; resolve(ok); };
+    go.onclick = () => done(true);
+    $("#confirm-no").onclick = () => done(false);
+    dlg.oncancel = () => done(false);
+    dlg.showModal();
+    $("#confirm-no").focus();  // safe default
+  });
+}
+
+async function onSwitch(btn) {
+  if (btn.getAttribute("aria-disabled") === "true") return;
+  const name = btn.dataset.charger, turnOn = btn.dataset.on !== "true";
+  if (!(await confirmSwitch(turnOn))) return;
+  ui.pending[name] = turnOn; delete ui.error[name]; rerender();
+  try {
+    const r = await fetch(`/api/victron/${encodeURIComponent(name)}/charger`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on: turnOn }),
+    });
+    if (r.ok) {  // apply the confirmed mode now; the next push says the same (no flicker)
+      const dev = lastData?.victron?.find(x => x.name === name);
+      if (dev?.control) dev.control = { ...dev.control, mode: (await r.json()).mode, error: null, busy: false };
+    } else ui.error[name] = r.status === 409 ? "busy" : ((await r.json().catch(() => ({}))).detail ?? "unreachable");
+  } catch { ui.error[name] = "network"; }
+  delete ui.pending[name]; rerender();
+  if (ui.error[name]) setTimeout(() => { delete ui.error[name]; rerender(); }, 8000);
+}
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-charger]"); if (b) onSwitch(b); });
 
 function bmvCard(d) {
   const v = d.values, stale = isStale(d.updated);
@@ -249,7 +345,10 @@ const CARD = { solar: solarCard, bmv: bmvCard, orion: orionCard };
 const ORDER = { solar: 0, orion: 1, bmv: 2 };
 let lastFlow = "", lastEnergy = "", lastBatteries = "";
 
+let lastData = null;
+const rerender = () => lastData && render(lastData);
 function render(data) {
+  lastData = data;
   const vic = [...(data.victron ?? [])].sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
   const flow = flowStrip(vic, data.batteries);
   const energy = vic.map(d => d.error === "missing_key" ? keyCard(d) : CARD[d.kind](d)).join("");

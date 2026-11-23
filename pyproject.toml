@@ -14,6 +14,8 @@ dependencies = [
   "victron-ble>=0.9.3,<0.10",
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
+  "cbor2>=5.6",
+  "dbus-fast>=2.0; sys_platform == 'linux'",
 ]
 
 [project.optional-dependencies]
@@ -46,7 +48,11 @@ packages = ["boatdash"]
 module = ["bleak.*", "victron_ble.*"]
 ignore_missing_imports = true
 
+[tool.coverage.run]
+# D-Bus glue that only runs against a real BlueZ daemon; the protocol around it is tested.
+omit = ["boatdash/bluez_agent.py"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--cov=boatdash --cov-report=term-missing --cov-fail-under=60"
+addopts = "--cov=boatdash --cov-report=term-missing --cov-fail-under=80"
