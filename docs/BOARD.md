@@ -10,9 +10,6 @@ _(empty — next pick from "Next", owner's call)_
 ## Next
 - **OPS-5 Deploy from `main`** — the service runs from a separate checkout updated only from
   `main`, so switching branches in the dev checkout never changes what runs on board.
-- **PWR-4 SmartSolar ON/OFF control** — BLE instant readout is read-only, so control goes through the
-  documented VE.Direct HEX protocol (device mode register 0x0200: on/off) over a VE.Direct-to-USB
-  cable. Blocked on owner: buy the cable. UI: ON/OFF button with confirmation and live state.
 - **NAV-1 GPS position, speed, course** — read gpsd (u-blox 7 on USB, 3D fix confirmed); show in UI.
   Depends on CORE-1.
 - **CORE-1 Data store + WebSocket deltas** — Signal K paths/SI units, app factory, typed config
@@ -25,6 +22,8 @@ _(empty — next pick from "Next", owner's call)_
   (fake BMS/GPS sources); CI job skipped when the PR has the `light-tests` label, always run on `main`.
 
 ## Backlog
+- **OPS-6 Access control** — today anyone on the boat Wi-Fi can use the controls (solar switch).
+  Add a simple PIN/session for control actions before more controls land.
 - **PWR-2 History** — store battery/GPS history efficiently (ring buffer + downsampled on-disk
   store), charts of SOC/current over 24 h/7 d.
 - **PWR-3 Alarms** — thresholds (low SOC, cell imbalance, BMS protection), sound + visual.
@@ -37,12 +36,15 @@ _(empty — next pick from "Next", owner's call)_
 - **WX-1 Weather routing** — GRIB download when online, isochrone routing with boat polars.
 - **OPS-2 Raspberry Pi 5 migration** — image, NVMe boot, services, 12 V power, cooling, BLE range
   check from behind the panel.
-- **OPS-3 Fixed address / `navcentral.local`** — mDNS so screens find the app without an IP.
 
 ## Done
 - **OPS-7 Full-screen dashboard at login** — `deploy/install-kiosk.sh` adds an XDG autostart entry
   that waits for the service and opens Firefox in kiosk mode with its own quiet profile
-  (Alt+F4 to exit; `--remove` to undo). Autologin (LightDM) and no screen lock are set on navcentral.
+  (Alt+F4 to exit; `--remove` to undo). Autologin (LightDM) and no screen lock are set on navcentral (#7).
+- **PWR-4 Solar charger ON/OFF** — Bluetooth VE.Smart, confirm sheet, read-back; verified live (#6).
+- **OPS-3 Name on the network** — open `http://navcentral:8080` (router DNS, search domain `lan`)
+  or `http://navcentral.local:8080` (mDNS via avahi, works on any network). Server listens on IPv4
+  and IPv6 (the router hands out IPv6 for the name; phones try it first).
 - **CORE-0 Engineering foundation** — tooling, CI (3.11/3.13), tests, docs, board (#1).
 - **OPS-4 Desktop launcher** — anchor icon on the desktop + app menu; starts the service if
   needed and opens the dashboard (`deploy/install-desktop-launcher.sh`). The script is installed to

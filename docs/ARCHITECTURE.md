@@ -27,6 +27,8 @@ GPS, charts, radar and weather routing — with a consumer-grade UI.
 - `boatdash/ble.py` — the single shared BLE scanner (see `docs/systems/ble.md`).
 - `boatdash/jbd.py` — JBD BMS over BLE (see `docs/systems/bms-jbd.md`).
 - `boatdash/victron.py` — Victron SmartSolar, BMV, Orion XS (see `docs/systems/victron.md`).
+- `boatdash/vesmart.py`, `victron_control.py`, `bluez_agent.py` — solar charger on/off over a
+  paired Bluetooth link (VE.Smart), `POST /api/victron/{name}/charger`.
 - `boatdash/server.py` — FastAPI app; pushes a full snapshot every second (to be replaced by the
   store + deltas, board item CORE-1).
 - `web/index.html` — single page: energy flow, Victron cards, batteries (to be replaced by the design-system UI, UI-1).
