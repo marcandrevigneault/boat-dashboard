@@ -5,11 +5,15 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
 APP_DIR="$HOME/.local/share/applications"
+BIN_DIR="$HOME/.local/bin"
+LAUNCHER="$BIN_DIR/boat-dashboard-open"
 DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
 
-mkdir -p "$ICON_DIR" "$APP_DIR" "$DESKTOP_DIR"
+mkdir -p "$ICON_DIR" "$APP_DIR" "$DESKTOP_DIR" "$BIN_DIR"
 install -m 0644 "$REPO/deploy/boat-dashboard.svg" "$ICON_DIR/boat-dashboard.svg"
-chmod +x "$REPO/deploy/open-dashboard.sh"
+# Copy the launcher script out of the repo: the desktop icon must keep working whatever branch
+# the checkout is on (the script does not exist on every branch).
+install -m 0755 "$REPO/deploy/open-dashboard.sh" "$LAUNCHER"
 
 cat > "$APP_DIR/boat-dashboard.desktop" <<EOF
 [Desktop Entry]
@@ -17,7 +21,7 @@ Type=Application
 Name=Boat Dashboard
 Name[fr]=Tableau de bord
 Comment=Batteries, énergie et navigation
-Exec=$REPO/deploy/open-dashboard.sh
+Exec=$LAUNCHER
 Icon=boat-dashboard
 Terminal=false
 Categories=Utility;

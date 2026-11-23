@@ -39,5 +39,6 @@ WX (weather/routing), OPS (hardware/deploy).
 
 ## Done
 - **OPS-4 Desktop launcher** — anchor icon on the desktop + app menu; starts the service if
-  needed and opens the dashboard (`deploy/install-desktop-launcher.sh`).
+  needed and opens the dashboard (`deploy/install-desktop-launcher.sh`). The script is installed to
+  `~/.local/bin/boat-dashboard-open` so the icon works whatever branch the checkout is on.
 - **PWR-0 JBD BMS over BLE** — both batteries live, reconnects, French UI, systemd service.
