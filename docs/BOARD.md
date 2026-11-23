@@ -5,13 +5,11 @@ IDs: CORE (backend platform), UI, PWR (power), NAV (navigation), N2K (NMEA 2000)
 WX (weather/routing), OPS (hardware/deploy).
 
 ## In progress
-- **CORE-0 Engineering foundation** — PR #1 (`chore/engineering-foundation`), CI green.
-  Next step: owner merges PR #1 (merge policy still to be decided by owner), then start CORE-1.
-
-- **PWR-1 Victron monitoring over BLE** — PR open (`feat/victron-ble`), Full tier.
-  Next step: CI green → merge (after #1). Then PWR-4 when the VE.Direct cable is available.
+_(empty — next pick from "Next", owner's call)_
 
 ## Next
+- **OPS-5 Deploy from `main`** — the service runs from a separate checkout updated only from
+  `main`, so switching branches in the dev checkout never changes what runs on board.
 - **PWR-4 SmartSolar ON/OFF control** — BLE instant readout is read-only, so control goes through the
   documented VE.Direct HEX protocol (device mode register 0x0200: on/off) over a VE.Direct-to-USB
   cable. Blocked on owner: buy the cable. UI: ON/OFF button with confirmation and live state.
@@ -42,6 +40,10 @@ WX (weather/routing), OPS (hardware/deploy).
 - **OPS-3 Fixed address / `navcentral.local`** — mDNS so screens find the app without an IP.
 
 ## Done
-- **PWR-1 (code) Victron monitoring** — SmartSolar, BMV-712, Orion XS decoded live; shared BLE
-  scanner fixes BlueZ InProgress conflicts; energy-flow strip + cards. Keys outside the repo.
+- **CORE-0 Engineering foundation** — tooling, CI (3.11/3.13), tests, docs, board (#1).
+- **OPS-4 Desktop launcher** — anchor icon on the desktop + app menu; starts the service if
+  needed and opens the dashboard (`deploy/install-desktop-launcher.sh`). The script is installed to
+  `~/.local/bin/boat-dashboard-open` so the icon works whatever branch the checkout is on (#2).
+- **PWR-1 Victron monitoring** — SmartSolar, BMV-712, Orion XS decoded live; shared BLE
+  scanner fixes BlueZ InProgress conflicts; energy-flow strip + cards. Keys outside the repo (#3).
 - **PWR-0 JBD BMS over BLE** — both batteries live, reconnects, French UI, systemd service.
