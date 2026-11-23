@@ -44,7 +44,7 @@
   .card h3 { margin:0 0 2px; font-size:16px; font-weight:600; display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .card .model { font-size:12px; color:var(--dim); margin-bottom:14px; }
   .chip { font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px; background:var(--card2); border:1px solid var(--line); white-space:nowrap; }
-  .chip.ok { color:var(--ok); } .chip.warn { color:var(--warn); } .chip.bad { color:var(--bad); } .chip.dim { color:var(--dim); }
+  .chip.ok { color:var(--ok); } .chip.warn { color:var(--warn); } .chip.bad { color:var(--bad); } .chip.dim { color:var(--dim); } .chip.idle { color:var(--accent); }
   .hero { display:flex; align-items:baseline; gap:6px; margin-bottom:4px; }
   .hero .big { font-size:42px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
   .hero .unit { color:var(--dim); font-size:16px; }
@@ -106,9 +106,20 @@ const OFF_FR = {
   protection_active: "protection active", engine_shutdown: "moteur arrêté",
   analysing_input_voltage: "analyse de la tension d'entrée", bms: "coupé par le BMS",
 };
-const stateChip = (st, stale) => {
+// Off for a normal reason (night, engine stopped) = standby, not a fault or a lost link.
+const idleReason = (d) => {
+  const v = d.values;
+  if (v.state !== "off") return null;
+  if (d.kind === "solar" && !(v.pv_power > 0)) return "Pas de soleil — reprend tout seul au lever du jour.";
+  if (d.kind === "orion" && ["remote_input", "engine_shutdown"].includes(v.off_reason))
+    return "Moteur arrêté — se met en marche avec le moteur.";
+  return null;
+};
+const stateLabel = (d) => idleReason(d) ? "En veille" : (STATE_FR[d.values.state] ?? "—");
+const stateChip = (st, stale, idle = false) => {
   if (stale) return `<span class="chip dim">hors ligne</span>`;
   if (!st) return `<span class="chip dim">—</span>`;
+  if (idle) return `<span class="chip idle">En veille</span>`;
   const cls = st === "fault" ? "bad" : st === "off" ? "dim" : "ok";
   return `<span class="chip ${cls}">${esc(STATE_FR[st] ?? st)}</span>`;
 };
@@ -119,7 +130,7 @@ const hm = (mins) => num(mins) ? `${Math.floor(mins / 60)} h ${String(Math.round
 function solarCard(d) {
   const v = d.values, stale = isStale(d.updated), on = v.state && v.state !== "off";
   return `<div class="card ${stale ? "stale" : ""}">
-    <h3>☀️ Solaire ${stateChip(v.state, stale)}</h3>
+    <h3>☀️ Solaire ${stateChip(v.state, stale, !!idleReason(d))}</h3>
     <div class="model">${esc(d.model ?? d.name)}</div>
     <div class="hero"><span class="big">${num(v.pv_power) ? v.pv_power : "—"}</span><span class="unit">W panneaux</span></div>
     <div class="metrics" style="margin-top:12px">
@@ -127,6 +138,7 @@ function solarCard(d) {
       ${metric("Tension", fmt(v.battery_voltage, 2, " V"))}
       ${metric("Aujourd'hui", num(v.yield_today_wh) ? (v.yield_today_wh >= 1000 ? fmt(v.yield_today_wh / 1000, 2, " kWh") : `${v.yield_today_wh} Wh`) : "—")}
     </div>
+    ${!stale && idleReason(d) ? `<div class="note">${idleReason(d)}</div>` : ""}
     ${errLine(v.error)}
     <div class="control">
       <div><div class="txt">Chargeur solaire</div><div class="sub">Contrôle à venir — câble VE.Direct requis</div></div>
@@ -159,10 +171,12 @@ function bmvCard(d) {
 
 function orionCard(d) {
   const v = d.values, stale = isStale(d.updated);
-  const why = v.state === "off" && v.off_reason && v.off_reason !== "no_reason"
+  const idle = idleReason(d);
+  const why = idle && !stale ? `<div class="note">${idle}</div>`
+    : v.state === "off" && v.off_reason && v.off_reason !== "no_reason"
     ? `<div class="note">À l'arrêt : ${esc(OFF_FR[v.off_reason] ?? v.off_reason.replaceAll("_", " "))}</div>` : "";
   return `<div class="card ${stale ? "stale" : ""}">
-    <h3>⚙️ Alternateur ${stateChip(v.state, stale)}</h3>
+    <h3>⚙️ Alternateur ${stateChip(v.state, stale, !!idle)}</h3>
     <div class="model">${esc(d.name)} · chargeur DC-DC</div>
     <div class="hero"><span class="big">${num(v.output_power) ? Math.round(v.output_power) : "—"}</span><span class="unit">W vers le banc</span></div>
     <div class="metrics" style="margin-top:12px">
@@ -180,7 +194,9 @@ function keyCard(d) {
 }
 
 function flowStrip(vic, bats) {
-  const by = (k) => vic.find(d => d.kind === k && !isStale(d.updated))?.values ?? {};
+  const dev = (k) => vic.find(d => d.kind === k && !isStale(d.updated));
+  const lbl = (k) => dev(k) ? stateLabel(dev(k)) : "—";
+  const by = (k) => dev(k)?.values ?? {};
   const s = by("solar"), o = by("orion"), b = by("bmv");
   const solarW = s.charge_power, altW = o.output_power, netW = b.power;
   const loadW = num(netW) ? (solarW ?? 0) + (altW ?? 0) - netW : null;
@@ -188,8 +204,8 @@ function flowStrip(vic, bats) {
   const soc = num(b.soc) ? b.soc : live.length ? live.reduce((a, x) => a + x.soc * x.capacity_ah, 0) / live.reduce((a, x) => a + x.capacity_ah, 0) : null;
   const socSrc = num(b.soc) ? "BMV" : live.length ? "moyenne BMS" : "";
   return `<div class="flow">
-    <div><div class="l"><span class="dot" style="background:var(--sun)"></span>Solaire</div><div class="v">${fmt(solarW, 0, " W")}</div><div class="s">${esc(STATE_FR[s.state] ?? "—")}</div></div>
-    <div><div class="l"><span class="dot" style="background:var(--alt)"></span>Alternateur</div><div class="v">${fmt(altW, 0, " W")}</div><div class="s">${esc(STATE_FR[o.state] ?? "—")}</div></div>
+    <div><div class="l"><span class="dot" style="background:var(--sun)"></span>Solaire</div><div class="v">${fmt(solarW, 0, " W")}</div><div class="s">${esc(lbl("solar"))}</div></div>
+    <div><div class="l"><span class="dot" style="background:var(--alt)"></span>Alternateur</div><div class="v">${fmt(altW, 0, " W")}</div><div class="s">${esc(lbl("orion"))}</div></div>
     <div><div class="l"><span class="dot" style="background:var(--warn)"></span>Consommation</div><div class="v">${fmt(loadW, 0, " W")}</div><div class="s">bord</div></div>
     <div><div class="l"><span class="dot" style="background:var(--accent)"></span>Banc</div><div class="v ${(netW ?? 0) >= 0 ? "chg" : "dis"}">${fmt(netW, 0, " W")}</div><div class="s">${num(b.current) ? fmt(b.current, 1, " A") : "—"} · ${fmt(b.voltage, 2, " V")}</div></div>
     <div><div class="l"><span class="dot" style="background:var(--ok)"></span>État de charge</div><div class="v">${num(soc) ? Math.round(soc) + " %" : "—"}</div><div class="s">${socSrc}</div></div>
