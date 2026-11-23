@@ -14,6 +14,8 @@ from typing import Any
 
 from bleak import BleakClient
 
+from .ble import BleHub
+
 log = logging.getLogger(__name__)
 
 NOTIFY_UUID = "0000ff01-0000-1000-8000-00805f9b34fb"
@@ -127,7 +129,10 @@ def parse_cell_voltages(p: bytes, state: BatteryState) -> None:
 class JBDClient:
     """Keeps a connection to one BMS and polls it, reconnecting as needed."""
 
-    def __init__(self, name: str, address: str, interval: float = 2.0):
+    def __init__(
+        self, name: str, address: str, interval: float = 2.0, hub: BleHub | None = None
+    ) -> None:
+        self.hub = hub
         self.state = BatteryState(name=name, address=address)
         self.interval = interval
         self._buf = bytearray()
@@ -161,7 +166,11 @@ class JBDClient:
         while True:
             try:
                 log.info("connecting to %s (%s)", self.state.name, self.state.address)
-                async with BleakClient(self.state.address, timeout=20) as client:
+                target: Any = self.state.address
+                if self.hub is not None:  # avoid a second BlueZ discovery (InProgress error)
+                    async with asyncio.timeout(60):
+                        target = await self.hub.wait_for_device(self.state.address)
+                async with BleakClient(target, timeout=20) as client:
                     await client.start_notify(NOTIFY_UUID, self._on_notify)
                     self.state.connected = True
                     backoff = 2.0
