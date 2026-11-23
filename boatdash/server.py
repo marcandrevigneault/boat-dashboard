@@ -83,4 +83,6 @@ app.mount("/", StaticFiles(directory=ROOT / "web", html=True), name="web")
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=CONFIG.get("http_port", 8080))
+    # "" = every interface, IPv4 and IPv6 (asyncio opens one socket per family; "::" would be
+    # IPv6-only). The router gives the hostname IPv6 addresses too, and phones try those first.
+    uvicorn.run(app, host=CONFIG.get("http_host", ""), port=CONFIG.get("http_port", 8080))

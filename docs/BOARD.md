@@ -37,9 +37,11 @@ _(empty — next pick from "Next", owner's call)_
 - **WX-1 Weather routing** — GRIB download when online, isochrone routing with boat polars.
 - **OPS-2 Raspberry Pi 5 migration** — image, NVMe boot, services, 12 V power, cooling, BLE range
   check from behind the panel.
-- **OPS-3 Fixed address / `navcentral.local`** — mDNS so screens find the app without an IP.
 
 ## Done
+- **OPS-3 Name on the network** — open `http://navcentral:8080` (router DNS, search domain `lan`)
+  or `http://navcentral.local:8080` (mDNS via avahi, works on any network). Server listens on IPv4
+  and IPv6 (the router hands out IPv6 for the name; phones try it first).
 - **CORE-0 Engineering foundation** — tooling, CI (3.11/3.13), tests, docs, board (#1).
 - **OPS-4 Desktop launcher** — anchor icon on the desktop + app menu; starts the service if
   needed and opens the dashboard (`deploy/install-desktop-launcher.sh`). The script is installed to
