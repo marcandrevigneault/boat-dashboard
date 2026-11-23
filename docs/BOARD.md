@@ -38,4 +38,6 @@ WX (weather/routing), OPS (hardware/deploy).
 - **OPS-3 Fixed address / `navcentral.local`** — mDNS so screens find the app without an IP.
 
 ## Done
+- **OPS-4 Desktop launcher** — anchor icon on the desktop + app menu; starts the service if
+  needed and opens the dashboard (`deploy/install-desktop-launcher.sh`).
 - **PWR-0 JBD BMS over BLE** — both batteries live, reconnects, French UI, systemd service.
